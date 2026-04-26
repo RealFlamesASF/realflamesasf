@@ -27,9 +27,13 @@ iframe { width:100%; height:200px; border-radius:10px; }
 </header>
 
 <div class="container" id="classes"></div>
+<button onclick="goBack('classes')">⬅️ Zurück</button>
 <div class="container hidden" id="subjects"></div>
+<button onclick="goBack('subjects')">⬅️ Zurück</button>
 <div class="container hidden" id="topics"></div>
+<button onclick="goBack('topics')">⬅️ Zurück</button>
 <div class="container hidden" id="content"></div>
+<button onclick="goBack('content')">⬅️ Zurück</button>
 
 <div id="loginBox" class="container hidden">
 <input id="username" placeholder="Username">
@@ -212,7 +216,14 @@ save();
 function toggleClass(){
 let c=adminClass.value;
 data.classes[c].enabled=!data.classes[c].enabled;
-save(); renderClasses();
+save(); function goBack(from){
+ document.getElementById(from).classList.add('hidden');
+ if(from==='subjects') document.getElementById('classes').classList.remove('hidden');
+ if(from==='topics') document.getElementById('subjects').classList.remove('hidden');
+ if(from==='content') document.getElementById('topics').classList.remove('hidden');
+}
+
+renderClasses();
 }
 
 function toggleSubject(){
