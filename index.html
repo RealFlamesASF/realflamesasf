@@ -5,21 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LernSeite</title>
 <style>
-body { font-family: Arial; margin:0; background:linear-gradient(135deg,#667eea,#764ba2); color:#111; }
-header { background:rgba(0,0,0,0.7); color:white; padding:15px; text-align:center; }
-button { padding:10px; margin:5px; border:none; border-radius:10px; cursor:pointer; }
+body { font-family: Arial; margin:0; background:#0f172a; color:white; }
+header { padding:15px; text-align:center; background:#1e293b; }
 .container { padding:20px; }
-.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:15px; }
-.card { padding:20px; border-radius:15px; background:white; transition:0.3s; cursor:pointer; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:15px; }
+.card { background:#1e293b; padding:20px; border-radius:15px; cursor:pointer; transition:0.3s; }
 .card:hover { transform:scale(1.05); }
-.blue { background:#3b82f6; color:white; }
-.locked { background:#f87171; color:white; }
+.locked { background:#7f1d1d; }
 .hidden { display:none; }
-#adminPanel { background:#111827; color:white; padding:15px; border-radius:10px; }
-input, select, textarea { width:100%; margin:5px 0; padding:8px; border-radius:8px; border:none; }
+button { padding:10px; margin:5px; border:none; border-radius:10px; cursor:pointer; }
+#adminPanel { background:#020617; padding:20px; }
+input, select, textarea { width:100%; margin:5px 0; padding:10px; border-radius:10px; border:none; }
 iframe { width:100%; height:200px; border-radius:10px; }
-.fade { animation:fadeIn 0.5s ease; }
-@keyframes fadeIn { from{opacity:0; transform:translateY(10px);} to{opacity:1;} }
 </style>
 </head>
 <body>
@@ -29,166 +26,203 @@ iframe { width:100%; height:200px; border-radius:10px; }
 <button onclick="showLogin()">Admin</button>
 </header>
 
-<div class="container" id="classes">
-<h2>Klassen</h2>
-<div class="grid">
-<div class="card" onclick="openClass(5)">5. Klasse</div>
-<div class="card" onclick="openClass(6)">6. Klasse</div>
-<div class="card" onclick="openClass(7)">7. Klasse</div>
-<div class="card">8. Klasse (kommt bald)</div>
-</div>
-</div>
-
-<div class="container hidden fade" id="subjects"></div>
-<div class="container hidden fade" id="topics"></div>
-<div class="container hidden fade" id="content"></div>
+<div class="container" id="classes"></div>
+<div class="container hidden" id="subjects"></div>
+<div class="container hidden" id="topics"></div>
+<div class="container hidden" id="content"></div>
 
 <div id="loginBox" class="container hidden">
-<h2>Admin Login</h2>
 <input id="username" placeholder="Username">
 <input id="password" type="password" placeholder="Passwort">
 <button onclick="login()">Login</button>
 </div>
 
 <div id="adminPanel" class="hidden">
-<h2>⚙️ Admin Panel</h2>
+<h2>⚙️ Admin</h2>
+<select id="adminClass"></select>
 <select id="adminSubject"></select>
-<input id="topicName" placeholder="Thema erstellen">
+<input id="topicName" placeholder="Thema">
 <button onclick="addTopic()">Thema hinzufügen</button>
-<textarea id="postText" placeholder="Nachricht..."></textarea>
-<input id="video" placeholder="YouTube Embed Link">
+<button onclick="deleteTopic()">Thema löschen</button>
+
 <select id="adminTopic"></select>
+<textarea id="postText" placeholder="Post"></textarea>
+<input id="video" placeholder="YouTube Link">
 <button onclick="addPost()">Post hinzufügen</button>
-<button onclick="unlockSubject()">Fach freischalten</button>
+
+<button onclick="toggleClass()">Klasse an/aus</button>
+<button onclick="toggleSubject()">Fach an/aus</button>
 </div>
 
 <script>
-let isAdmin = false;
-let currentClass = 7;
-let data = JSON.parse(localStorage.getItem('data')) || {
-classes:{
-7:{ subjects:{
-Deutsch:{unlocked:true,topics:{}},
-Mathe:{unlocked:false,topics:{}},
-Englisch:{unlocked:false,topics:{}},
-Biologie:{unlocked:false,topics:{}},
-Physik:{unlocked:false,topics:{}},
-Chemie:{unlocked:false,topics:{}}
-}}
-}}
+let isAdmin=false;
+let currentClass=null;
+let currentSubject=null;
 
-function save(){ localStorage.setItem('data', JSON.stringify(data)); }
+let data=JSON.parse(localStorage.getItem('data'))||{classes:{}};
 
-function openClass(c){
-currentClass=c;
+// Klassen erstellen 5-10
+for(let i=5;i<=10;i++){
+ if(!data.classes[i]){
+  data.classes[i]={enabled:true,subjects:{
+    Deutsch:{enabled:true,topics:{}},
+    Mathe:{enabled:false,topics:{}},
+    Englisch:{enabled:false,topics:{}},
+    Biologie:{enabled:false,topics:{}},
+    Physik:{enabled:false,topics:{}},
+    Chemie:{enabled:false,topics:{}}
+  }};
+ }
+}
+
+function save(){localStorage.setItem('data',JSON.stringify(data));}
+
+function renderClasses(){
+let div=document.getElementById('classes');
+div.innerHTML='<h2>Klassen</h2><div class="grid"></div>';
+let grid=div.querySelector('.grid');
+for(let c in data.classes){
+ let cl=data.classes[c];
+ let card=document.createElement('div');
+ card.className='card '+(cl.enabled?'':'locked');
+ card.innerText=cl.enabled?c+'. Klasse':'🔒 '+c+'. Klasse';
+ card.onclick=()=>{
+  if(!cl.enabled && !isAdmin)return alert('Gesperrt');
+  currentClass=c;
+  openSubjects();
+ }
+ grid.appendChild(card);
+}
+}
+
+function openSubjects(){
 document.getElementById('classes').classList.add('hidden');
-if(!data.classes[c]){ alert('Wird noch gemacht'); return; }
-renderSubjects();
-}
-
-function renderSubjects(){
-let div = document.getElementById('subjects');
-div.innerHTML = '<h2>Fächer</h2><div class="grid"></div>';
-let grid = div.querySelector('.grid');
-let subs = data.classes[currentClass].subjects;
+let div=document.getElementById('subjects');
+div.innerHTML='<h2>Fächer</h2><div class="grid"></div>';
+let grid=div.querySelector('.grid');
+let subs=data.classes[currentClass].subjects;
 for(let s in subs){
-let sub = subs[s];
-let card = document.createElement('div');
-card.className = 'card '+(sub.unlocked?'':'locked');
-card.innerHTML = sub.unlocked ? s : '🔒 '+s;
-card.onclick = ()=>{
-if(!sub.unlocked && !isAdmin){ alert('Gesperrt'); return; }
-openTopics(s);
-}
-grid.appendChild(card);
+ let sub=subs[s];
+ let card=document.createElement('div');
+ card.className='card '+(sub.enabled?'':'locked');
+ card.innerText=sub.enabled?s:'🔒 '+s;
+ card.onclick=()=>{
+  if(!sub.enabled && !isAdmin)return alert('Gesperrt');
+  currentSubject=s;
+  openTopics();
+ }
+ grid.appendChild(card);
 }
 div.classList.remove('hidden');
 }
 
-function openTopics(subject){
-let div = document.getElementById('topics');
-div.innerHTML = `<h2>${subject}</h2><div class='grid'></div>`;
-let grid = div.querySelector('.grid');
-let topics = data.classes[currentClass].subjects[subject].topics;
+function openTopics(){
+document.getElementById('subjects').classList.add('hidden');
+let div=document.getElementById('topics');
+div.innerHTML='<h2>Themen</h2><div class="grid"></div>';
+let grid=div.querySelector('.grid');
+let topics=data.classes[currentClass].subjects[currentSubject].topics;
 for(let t in topics){
-let card = document.createElement('div');
-card.className='card';
-card.innerText=t;
-card.onclick=()=>openPosts(subject,t);
-grid.appendChild(card);
+ let card=document.createElement('div');
+ card.className='card';
+ card.innerText=t;
+ card.onclick=()=>openPosts(t);
+ grid.appendChild(card);
 }
 div.classList.remove('hidden');
 }
 
-function openPosts(subject,topic){
+function openPosts(topic){
+document.getElementById('topics').classList.add('hidden');
 let div=document.getElementById('content');
-div.innerHTML=`<h2>${topic}</h2>`;
-let posts=data.classes[currentClass].subjects[subject].topics[topic];
+div.innerHTML='<h2>'+topic+'</h2>';
+let posts=data.classes[currentClass].subjects[currentSubject].topics[topic];
 posts.forEach((p,i)=>{
-let card=document.createElement('div');
-card.className='card fade';
-card.innerHTML=`<h3>${p.text}</h3>${p.video?`<iframe src="${p.video}"></iframe>`:''}`;
-if(isAdmin){
-let del=document.createElement('button');
-del.innerText='Löschen';
-del.onclick=()=>{posts.splice(i,1); save(); openPosts(subject,topic);} 
-card.appendChild(del);
-}
-div.appendChild(card);
+ let card=document.createElement('div');
+ card.className='card';
+ card.innerHTML=`<h3>${p.text}</h3>${p.video?`<iframe src="${p.video}"></iframe>`:''}`;
+ if(isAdmin){
+  let del=document.createElement('button');
+  del.innerText='Löschen';
+  del.onclick=()=>{posts.splice(i,1); save(); openPosts(topic);} 
+  card.appendChild(del);
+ }
+ div.appendChild(card);
 });
 div.classList.remove('hidden');
 }
 
-function showLogin(){ document.getElementById('loginBox').classList.remove('hidden'); }
+function showLogin(){document.getElementById('loginBox').classList.remove('hidden');}
 
 function login(){
-if(username.value==='admin' && password.value==='3005'){
-isAdmin=true;
-alert('Admin aktiv');
-document.getElementById('adminPanel').classList.remove('hidden');
-loadAdmin();
-}
+ if(username.value==='admin'&&password.value==='3005'){
+  isAdmin=true;
+  document.getElementById('adminPanel').classList.remove('hidden');
+  loadAdmin();
+ }
 }
 
 function loadAdmin(){
-let subSel=adminSubject;
-subSel.innerHTML='';
-let subs=data.classes[currentClass].subjects;
-for(let s in subs){ subSel.innerHTML+=`<option>${s}</option>` }
-updateTopics();
+adminClass.innerHTML='';
+for(let c in data.classes){adminClass.innerHTML+=`<option>${c}</option>`}
+updateSubjects();
 }
 
+function updateSubjects(){
+let c=adminClass.value;
+adminSubject.innerHTML='';
+for(let s in data.classes[c].subjects){adminSubject.innerHTML+=`<option>${s}</option>`}
+updateTopics();
+}
+adminClass.onchange=updateSubjects;
+
 function updateTopics(){
+let c=adminClass.value;
 let s=adminSubject.value;
-let topicSel=adminTopic;
-topicSel.innerHTML='';
-let topics=data.classes[currentClass].subjects[s].topics;
-for(let t in topics){ topicSel.innerHTML+=`<option>${t}</option>` }
+adminTopic.innerHTML='';
+let topics=data.classes[c].subjects[s].topics;
+for(let t in topics){adminTopic.innerHTML+=`<option>${t}</option>`}
 }
 adminSubject.onchange=updateTopics;
 
 function addTopic(){
+let c=adminClass.value;
 let s=adminSubject.value;
 let t=topicName.value;
-let subj=data.classes[currentClass].subjects[s];
-if(!subj.topics[t]) subj.topics[t]=[];
-save(); updateTopics(); alert('Thema erstellt');
+if(!data.classes[c].subjects[s].topics[t])data.classes[c].subjects[s].topics[t]=[];
+save(); updateTopics();
+}
+
+function deleteTopic(){
+let c=adminClass.value;
+let s=adminSubject.value;
+let t=adminTopic.value;
+delete data.classes[c].subjects[s].topics[t];
+save(); updateTopics();
 }
 
 function addPost(){
+let c=adminClass.value;
 let s=adminSubject.value;
 let t=adminTopic.value;
-let subj=data.classes[currentClass].subjects[s];
-if(!subj.topics[t]) return;
-subj.topics[t].push({text:postText.value,video:video.value});
-save(); alert('Post hinzugefügt');
+data.classes[c].subjects[s].topics[t].push({text:postText.value,video:video.value});
+save();
 }
 
-function unlockSubject(){
-let s=adminSubject.value;
-data.classes[currentClass].subjects[s].unlocked=true;
-save(); alert('Freigeschaltet');
+function toggleClass(){
+let c=adminClass.value;
+data.classes[c].enabled=!data.classes[c].enabled;
+save(); renderClasses();
 }
+
+function toggleSubject(){
+let c=adminClass.value;
+let s=adminSubject.value;
+data.classes[c].subjects[s].enabled=!data.classes[c].subjects[s].enabled;
+save(); renderClasses();
+}
+
+renderClasses();
 </script>
 
 </body>
