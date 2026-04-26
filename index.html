@@ -17,6 +17,7 @@ button { padding:10px; margin:5px; border:none; border-radius:10px; cursor:point
 #adminPanel { background:#020617; padding:20px; }
 input, select, textarea { width:100%; margin:5px 0; padding:10px; border-radius:10px; border:none; }
 iframe { width:100%; height:200px; border-radius:10px; }
+#backBtn { position:fixed; top:10px; left:10px; background:#ef4444; color:white; display:none; }
 </style>
 </head>
 <body>
@@ -26,14 +27,12 @@ iframe { width:100%; height:200px; border-radius:10px; }
 <button onclick="showLogin()">Admin</button>
 </header>
 
+<button id="backBtn" onclick="goBack()">⬅️ Zurück</button>
+
 <div class="container" id="classes"></div>
-<button onclick="goBack('classes')">⬅️ Zurück</button>
 <div class="container hidden" id="subjects"></div>
-<button onclick="goBack('subjects')">⬅️ Zurück</button>
 <div class="container hidden" id="topics"></div>
-<button onclick="goBack('topics')">⬅️ Zurück</button>
 <div class="container hidden" id="content"></div>
-<button onclick="goBack('content')">⬅️ Zurück</button>
 
 <div id="loginBox" class="container hidden">
 <input id="username" placeholder="Username">
@@ -60,12 +59,12 @@ iframe { width:100%; height:200px; border-radius:10px; }
 
 <script>
 let isAdmin=false;
+let view='classes';
 let currentClass=null;
 let currentSubject=null;
 
 let data=JSON.parse(localStorage.getItem('data'))||{classes:{}};
 
-// Klassen erstellen 5-10
 for(let i=5;i<=10;i++){
  if(!data.classes[i]){
   data.classes[i]={enabled:true,subjects:{
@@ -81,7 +80,10 @@ for(let i=5;i<=10;i++){
 
 function save(){localStorage.setItem('data',JSON.stringify(data));}
 
+function showBack(){ document.getElementById('backBtn').style.display = view==='classes' ? 'none':'block'; }
+
 function renderClasses(){
+view='classes'; showBack();
 let div=document.getElementById('classes');
 div.innerHTML='<h2>Klassen</h2><div class="grid"></div>';
 let grid=div.querySelector('.grid');
@@ -100,6 +102,7 @@ for(let c in data.classes){
 }
 
 function openSubjects(){
+view='subjects'; showBack();
 document.getElementById('classes').classList.add('hidden');
 let div=document.getElementById('subjects');
 div.innerHTML='<h2>Fächer</h2><div class="grid"></div>';
@@ -121,6 +124,7 @@ div.classList.remove('hidden');
 }
 
 function openTopics(){
+view='topics'; showBack();
 document.getElementById('subjects').classList.add('hidden');
 let div=document.getElementById('topics');
 div.innerHTML='<h2>Themen</h2><div class="grid"></div>';
@@ -137,6 +141,7 @@ div.classList.remove('hidden');
 }
 
 function openPosts(topic){
+view='content'; showBack();
 document.getElementById('topics').classList.add('hidden');
 let div=document.getElementById('content');
 div.innerHTML='<h2>'+topic+'</h2>';
@@ -154,6 +159,12 @@ posts.forEach((p,i)=>{
  div.appendChild(card);
 });
 div.classList.remove('hidden');
+}
+
+function goBack(){
+if(view==='subjects'){ document.getElementById('subjects').classList.add('hidden'); renderClasses(); }
+else if(view==='topics'){ document.getElementById('topics').classList.add('hidden'); openSubjects(); }
+else if(view==='content'){ document.getElementById('content').classList.add('hidden'); openTopics(); }
 }
 
 function showLogin(){document.getElementById('loginBox').classList.remove('hidden');}
@@ -216,14 +227,7 @@ save();
 function toggleClass(){
 let c=adminClass.value;
 data.classes[c].enabled=!data.classes[c].enabled;
-save(); function goBack(from){
- document.getElementById(from).classList.add('hidden');
- if(from==='subjects') document.getElementById('classes').classList.remove('hidden');
- if(from==='topics') document.getElementById('subjects').classList.remove('hidden');
- if(from==='content') document.getElementById('topics').classList.remove('hidden');
-}
-
-renderClasses();
+save(); renderClasses();
 }
 
 function toggleSubject(){
